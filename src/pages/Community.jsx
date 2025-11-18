@@ -64,7 +64,9 @@ export default function Community() {
                 </thead>
                 <tbody>
                   <tr className="border-t border-t-[#d9e7d0] hover:bg-[#ecf3e7] cursor-pointer">
-                    <td className="h-[72px] px-4 py-2 w-[45%] text-[#131b0e] text-sm font-normal leading-normal">이번 주 배추 도매가 동향 공유합니다</td>
+                    <td className="h-[72px] px-4 py-2 w-[45%] text-[#131b0e] text-sm font-normal leading-normal">
+                      <Link to="/community/1" className="block">이번 주 배추 도매가 동향 공유합니다</Link>
+                    </td>
                     <td className="h-[72px] px-4 py-2 w-[15%] text-[#6d974e] text-sm font-normal leading-normal">김도매</td>
                     <td className="h-[72px] px-4 py-2 w-[15%] text-[#6d974e] text-sm font-normal leading-normal">2023-10-27</td>
                     <td className="h-[72px] px-4 py-2 w-[10%] text-[#6d974e] text-sm font-normal leading-normal">152</td>
