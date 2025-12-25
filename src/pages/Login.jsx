@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { api } from '../api/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -9,13 +10,7 @@ export default function Login() {
     password: ''
   });
   const [error, setError] = useState('');
-
-  // 테스트 계정 (실제 DB 연결 전까지 사용)
-  const mockAccounts = [
-    { username: 'admin', password: '123456', name: '관리자' },
-    { username: 'test', password: 'password', name: '테스트 사용자' },
-    { username: 'sanghyuk01', password: 'test1234', name: '김상혁' }
-  ];
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -25,7 +20,7 @@ export default function Login() {
     if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // 입력값 검증
@@ -34,26 +29,40 @@ export default function Login() {
       return;
     }
 
-    // mock 계정에서 일치하는 계정 찾기
-    const user = mockAccounts.find(
-      account => account.username === formData.username && account.password === formData.password
-    );
+    setLoading(true);
+    setError('');
 
-    if (user) {
-      // 로그인 성공
-      console.log('로그인 성공:', user);
-      // 로그인 상태 저장
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('isLoggedIn', 'true');
-      
-      // 헤더 업데이트를 위한 커스텀 이벤트 발생
-      window.dispatchEvent(new Event('loginStatusChanged'));
-      
-      // 홈 페이지로 이동
-      navigate('/');
-    } else {
-      // 로그인 실패
-      setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+    try {
+      // API 호출
+      const response = await api.login(formData.username, formData.password);
+
+      if (response.success) {
+        // 로그인 성공
+        console.log('로그인 성공:', response.user);
+        
+        // 로그인 상태 저장
+        const userData = {
+          seqNoA010: response.user.seqNoA010,
+          id: response.user.id,
+          name: response.user.name,
+          email: response.user.email
+        };
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // 헤더 업데이트를 위한 커스텀 이벤트 발생
+        window.dispatchEvent(new Event('loginStatusChanged'));
+        
+        // 홈 페이지로 이동
+        navigate('/');
+      } else {
+        setError(response.message || '로그인에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error('로그인 에러:', err);
+      setError(err.message || '로그인 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -150,20 +159,19 @@ export default function Login() {
                 {/* Login Button */}
                 <button
                   type="submit"
-                  className="flex w-full cursor-pointer items-center justify-center rounded-lg h-12 px-5 bg-green-brand hover:bg-green-brand-light text-white text-base font-bold transition-colors"
+                  disabled={loading}
+                  className="flex w-full cursor-pointer items-center justify-center rounded-lg h-12 px-5 bg-green-brand hover:bg-green-brand-light disabled:opacity-50 disabled:cursor-not-allowed text-white text-base font-bold transition-colors"
                 >
-                  로그인
+                  {loading ? '로그인 중...' : '로그인'}
                 </button>
               </form>
 
-              {/* 테스트 계정 안내 (개발용) */}
+              {/* API 연결 안내 (개발용) */}
               <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-xs text-blue-800 dark:text-blue-300 font-semibold mb-2">테스트 계정 (개발용):</p>
-                <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
-                  <li>• 아이디: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">admin</code> / 비밀번호: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">123456</code></li>
-                  <li>• 아이디: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">test</code> / 비밀번호: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">password</code></li>
-                  <li>• 아이디: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">sanghyuk01</code> / 비밀번호: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">test1234</code></li>
-                </ul>
+                <p className="text-xs text-blue-800 dark:text-blue-300 font-semibold mb-2">💡 백엔드 API 연결됨</p>
+                <p className="text-xs text-blue-700 dark:text-blue-400">
+                  데이터베이스에 등록된 계정으로 로그인하세요.
+                </p>
               </div>
 
               {/* Links */}
