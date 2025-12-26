@@ -1,7 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { api } from '../api/api';
 
 export default function Signup() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullname: '',
     username: '',
@@ -12,6 +14,7 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -21,14 +24,50 @@ export default function Signup() {
     if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 입력값 검증
+    if (!formData.fullname || !formData.username || !formData.email || !formData.password) {
+      setError('모든 필드를 입력해주세요.');
+      return;
+    }
+
     if (formData.password !== formData.confirm) {
       setError('비밀번호가 일치하지 않습니다.');
       return;
     }
-    // 회원가입 처리
-    console.log('Signup:', formData);
+
+    if (formData.password.length < 6) {
+      setError('비밀번호는 최소 6자 이상이어야 합니다.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // API 호출
+      const response = await api.signup(
+        formData.username,
+        formData.password,
+        formData.fullname,
+        formData.email
+      );
+
+      if (response.success) {
+        // 회원가입 성공
+        alert('회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.');
+        navigate('/login');
+      } else {
+        setError(response.message || '회원가입에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error('회원가입 에러:', err);
+      setError(err.message || '회원가입 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -123,9 +162,10 @@ export default function Signup() {
 
           <button
             type="submit"
-            className="w-full bg-green-brand hover:bg-green-brand-light text-white font-bold py-3 rounded-lg transition-colors"
+            disabled={loading}
+            className="w-full bg-green-brand hover:bg-green-brand-light disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-colors"
           >
-            회원가입
+            {loading ? '회원가입 중...' : '회원가입'}
           </button>
         </form>
 
