@@ -1,30 +1,48 @@
 import Layout from '../components/Layout';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { api } from '../api/api';
 
 export default function CommunityWrite() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
-    category: '도매 정보',
+    category: '도매정보',
     content: '',
-    file: null
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === 'file') {
-      setFormData({ ...formData, file: files[0] });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: API 호출로 글 등록
-    console.log('글 등록:', formData);
-    navigate('/community');
+    
+    if (!formData.title.trim() || !formData.content.trim()) {
+      setError('제목과 내용을 모두 입력해주세요.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await api.createPost(
+        formData.title,
+        formData.category,
+        formData.content
+      );
+      navigate(`/community/${response.id}`);
+    } catch (err) {
+      console.error('글 작성 실패:', err);
+      setError(err.message || '글 작성에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,6 +50,13 @@ export default function CommunityWrite() {
       <main className="flex-1 py-10">
         <div className="mx-auto w-full max-w-[960px] px-6">
           <h1 className="text-3xl font-extrabold text-[#131b0e] mb-6">글 쓰기</h1>
+          
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+          
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="grid md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
@@ -54,9 +79,9 @@ export default function CommunityWrite() {
                   onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-[#d9e7d0] bg-white/60 focus:outline-none focus:ring-2 focus:ring-[#64cf17]"
                 >
-                  <option>도매 정보</option>
-                  <option>소매 노하우</option>
-                  <option>구인/구직</option>
+                  <option>도매정보</option>
+                  <option>소매노하우</option>
+                  <option>구인구직</option>
                   <option>자유게시판</option>
                 </select>
               </div>
@@ -75,22 +100,13 @@ export default function CommunityWrite() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#131b0e] mb-1">첨부파일</label>
-              <input
-                type="file"
-                name="file"
-                onChange={handleChange}
-                className="block w-full text-sm text-[#6d974e] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#ecf3e7] file:text-[#131b0e] hover:file:bg-[#d9e7d0] cursor-pointer"
-              />
-            </div>
-
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
-                className="px-5 h-10 rounded-lg bg-[#64cf17] text-[#131b0e] font-bold hover:bg-opacity-90"
+                disabled={loading}
+                className="px-5 h-10 rounded-lg bg-[#64cf17] text-[#131b0e] font-bold hover:bg-opacity-90 disabled:opacity-50"
               >
-                등록
+                {loading ? '등록 중...' : '등록'}
               </button>
               <Link
                 to="/community"
@@ -105,4 +121,3 @@ export default function CommunityWrite() {
     </Layout>
   );
 }
-
