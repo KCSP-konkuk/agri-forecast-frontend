@@ -1,77 +1,104 @@
 import Layout from '../components/Layout';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { api } from '../api/api';
 
 export default function CommunityView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [post, setPost] = useState({
-    title: '이번 주 배추 도매가 동향 공유합니다',
-    author: '김도매',
-    authorId: 'kimdo', // 작성자 ID (API에서 받아올 예정)
-    date: '2023-10-27',
-    views: 152,
-    content: '이번 주 배추 도매가는 전주 대비 3~5% 등락을 보였습니다. 주요 원인은 물량 증가와 기온 하락으로 인한 수요 변화입니다.',
-    details: [
-      '가락시장 평균 거래가: 7,800원/10kg',
-      '중도매인 매입 원가 상승폭 제한',
-      '주중 대비 주말 수요 회복'
-    ],
-    comments: [
-      { author: '박소매', date: '2023-10-27', content: '재고 비축 팁 공유 감사합니다!' },
-      { author: '정농부', date: '2023-10-27', content: '지역별 편차도 있나요?' }
-    ]
-  });
+  const [post, setPost] = useState(null);
+  const [comments, setComments] = useState([]);
   const [comment, setComment] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isMyPost, setIsMyPost] = useState(false);
 
   useEffect(() => {
-    // TODO: API 호출로 글 데이터 가져오기
-    // fetch(`/api/community/${id}`)
-    //   .then(res => res.json())
-    //   .then(data => {
-    //     setPost(data);
-    //     
-    //     // 로그인된 사용자가 본인 글인지 확인
-    //     const userData = localStorage.getItem('user');
-    //     const isLoggedIn = localStorage.getItem('isLoggedIn');
-    //     
-    //     if (isLoggedIn === 'true' && userData) {
-    //       const user = JSON.parse(userData);
-    //       // 작성자 ID와 로그인 사용자 ID 비교
-    //       if (data.authorId === user.username || data.authorId === user.id) {
-    //         navigate(`/community/${id}/my`, { replace: true });
-    //       }
-    //     }
-    //   });
-    
-    // 임시: 로그인된 사용자가 본인 글인지 확인
-    // 실제 API 연동 시에는 위의 주석 처리된 코드를 사용
-    const checkIfMyPost = () => {
-      const userData = localStorage.getItem('user');
-      const isLoggedIn = localStorage.getItem('isLoggedIn');
+    loadPost();
+    loadComments();
+  }, [id]);
+
+  const loadPost = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const postData = await api.getPost(id);
+      setPost(postData);
       
-      if (isLoggedIn === 'true' && userData) {
+      // 본인 글인지 확인
+      const userData = localStorage.getItem('user');
+      if (userData) {
         const user = JSON.parse(userData);
-        // 임시로 작성자 이름이 '나'이거나 authorId가 사용자 username과 일치할 때 본인 글로 판단
-        // 실제로는 API에서 받은 authorId와 user.id를 비교해야 함
-        if (post.author === '나' || post.authorId === user.username) {
+        if (postData.authorId === user.seqNoA010) {
+          setIsMyPost(true);
           navigate(`/community/${id}/my`, { replace: true });
         }
       }
-    };
-    
-    // post 데이터가 로드된 후 확인
-    checkIfMyPost();
-  }, [id, navigate, post.author, post.authorId]);
+    } catch (err) {
+      console.error('게시글 로드 실패:', err);
+      setError('게시글을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleCommentSubmit = (e) => {
+  const loadComments = async () => {
+    try {
+      const commentsData = await api.getComments(id);
+      setComments(commentsData);
+    } catch (err) {
+      console.error('댓글 로드 실패:', err);
+    }
+  };
+
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (!comment.trim()) return;
-    // TODO: API 호출로 댓글 등록
-    console.log('댓글 등록:', comment);
-    setComment('');
-    // 댓글 목록 새로고침
+
+    setCommentLoading(true);
+    try {
+      await api.createComment(id, comment);
+      setComment('');
+      loadComments(); // 댓글 목록 새로고침
+    } catch (err) {
+      console.error('댓글 작성 실패:', err);
+      alert('댓글 작성에 실패했습니다.');
+    } finally {
+      setCommentLoading(false);
+    }
   };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <main className="flex-1 py-10">
+          <div className="mx-auto w-full max-w-[960px] px-6">
+            <div className="text-center py-10 text-[#6d974e]">로딩 중...</div>
+          </div>
+        </main>
+      </Layout>
+    );
+  }
+
+  if (error || !post) {
+    return (
+      <Layout>
+        <main className="flex-1 py-10">
+          <div className="mx-auto w-full max-w-[960px] px-6">
+            <div className="text-center py-10 text-red-600">{error || '게시글을 찾을 수 없습니다.'}</div>
+            <Link to="/community" className="text-[#64cf17] hover:underline">목록으로 돌아가기</Link>
+          </div>
+        </main>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -81,28 +108,20 @@ export default function CommunityView() {
           <div className="bg-white/40 border border-[#d9e7d0] rounded-lg p-6">
             <h2 className="text-2xl font-bold text-[#131b0e] mb-3">{post.title}</h2>
             <p className="text-sm text-[#6d974e] mb-4">
-              작성자: {post.author} | 작성일: {post.date} | 조회수: {post.views}
+              작성자: {post.authorName || '익명'} | 작성일: {formatDate(post.createdAt)} | 조회수: {post.viewCount || 0}
             </p>
-            <p className="text-[#131b0e] leading-relaxed">{post.content}</p>
-            {post.details && post.details.length > 0 && (
-              <ul className="list-disc pl-6 mt-3 text-[#131b0e]">
-                {post.details.map((detail, index) => (
-                  <li key={index}>{detail}</li>
-                ))}
-              </ul>
-            )}
-            <p className="mt-3 text-[#131b0e]">자세한 수급 전망은 댓글로 이어가겠습니다.</p>
+            <div className="text-[#131b0e] leading-relaxed whitespace-pre-wrap">{post.content}</div>
           </div>
 
           <section className="mt-8">
-            <h3 className="text-lg font-bold text-[#131b0e] mb-3">댓글 {post.comments.length}</h3>
+            <h3 className="text-lg font-bold text-[#131b0e] mb-3">댓글 {comments.length}</h3>
             <div className="space-y-3">
-              {post.comments.map((comment, index) => (
-                <div key={index} className="p-4 border border-[#d9e7d0] rounded-lg bg-[#fafcf8]">
+              {comments.map((commentItem) => (
+                <div key={commentItem.id} className="p-4 border border-[#d9e7d0] rounded-lg bg-[#fafcf8]">
                   <p className="text-sm text-[#131b0e]">
-                    <span className="font-semibold">{comment.author}</span> · {comment.date}
+                    <span className="font-semibold">{commentItem.authorName || '익명'}</span> · {formatDate(commentItem.createdAt)}
                     <br />
-                    {comment.content}
+                    {commentItem.content}
                   </p>
                 </div>
               ))}
@@ -114,12 +133,14 @@ export default function CommunityView() {
                 onChange={(e) => setComment(e.target.value)}
                 className="flex-1 px-4 py-2 rounded-lg border border-[#d9e7d0] bg-white/60 focus:outline-none focus:ring-2 focus:ring-[#64cf17]"
                 placeholder="댓글을 입력하세요"
+                disabled={commentLoading}
               />
               <button
                 type="submit"
-                className="px-4 h-10 rounded-lg bg-[#64cf17] text-[#131b0e] font-bold hover:bg-opacity-90"
+                disabled={commentLoading}
+                className="px-4 h-10 rounded-lg bg-[#64cf17] text-[#131b0e] font-bold hover:bg-opacity-90 disabled:opacity-50"
               >
-                등록
+                {commentLoading ? '등록 중...' : '등록'}
               </button>
             </form>
           </section>
@@ -128,4 +149,3 @@ export default function CommunityView() {
     </Layout>
   );
 }
-
