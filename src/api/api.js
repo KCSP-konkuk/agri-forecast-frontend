@@ -64,6 +64,7 @@ export const api = {
 
     return data;
   },
+<<<<<<< HEAD
 
   // ========== 커뮤니티 API ==========
   
@@ -230,6 +231,8 @@ export const api = {
       throw new Error('댓글 삭제에 실패했습니다.');
     }
   },
+=======
+>>>>>>> 1fda3a79e7219e44366c25b0a6d1e227eace8a32
 };
 
 
