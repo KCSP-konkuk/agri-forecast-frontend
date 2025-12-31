@@ -230,6 +230,47 @@ export const api = {
       throw new Error('댓글 삭제에 실패했습니다.');
     }
   },
+
+  // ========== 가격 API ==========
+  
+  // 모든 품목 목록 조회
+  getItems: async () => {
+    const response = await fetch(`${API_BASE_URL}/price/items`);
+    if (!response.ok) {
+      throw new Error('품목 목록을 불러오는데 실패했습니다.');
+    }
+    return await response.json();
+  },
+  
+  // 카테고리별 품목 목록 조회
+  getItemsByCategory: async (category) => {
+    const response = await fetch(`${API_BASE_URL}/price/items/category/${category}`);
+    if (!response.ok) {
+      throw new Error('품목 목록을 불러오는데 실패했습니다.');
+    }
+    return await response.json();
+  },
+  
+  // 특정 품목의 등급 목록 조회
+  getGradesByItemCode: async (itemCode) => {
+    const response = await fetch(`${API_BASE_URL}/price/items/${itemCode}/grades`);
+    if (!response.ok) {
+      throw new Error('등급 목록을 불러오는데 실패했습니다.');
+    }
+    return await response.json();
+  },
+  
+  // 가격 그래프 데이터 조회
+  getPriceGraph: async (itemCode, endDate, grade = '전체') => {
+    const dateStr = endDate.toISOString().split('T')[0];  // YYYY-MM-DD 형식
+    const response = await fetch(
+      `${API_BASE_URL}/price/graph?itemCode=${itemCode}&endDate=${dateStr}&grade=${encodeURIComponent(grade)}`
+    );
+    if (!response.ok) {
+      throw new Error('가격 그래프 데이터를 불러오는데 실패했습니다.');
+    }
+    return await response.json();
+  },
 };
 
 
